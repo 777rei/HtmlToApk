@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Logs
+server.log
+npm-debug.log*
+*.log
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+
+# Build artifacts that should never be committed
+*.apk

@@ -1,0 +1,21 @@
+{
+  "name": "html-to-apk-converter",
+  "version": "1.0.0",
+  "description": "MVP web service that converts a zipped HTML/CSS/JS website into a debug-signed Android APK using Apache Cordova.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20.5.0"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "fs-extra": "^11.3.0",
+    "multer": "^2.0.2"
+  }
+}

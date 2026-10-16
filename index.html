@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Convert a zipped HTML/CSS/JS website into a ready-to-install Android APK." />
+<title>HTML → APK Converter</title>
+<style>
+  /* ==========================================================================
+     Design tokens
+     ========================================================================== */
+  :root {
+    --bg-1: #f0fdf9;
+    --bg-2: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --accent: #059669;
+    --accent-2: #0d9488;
+    --accent-soft: #ecfdf5;
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
+    --success: #059669;
+    --success-soft: #ecfdf5;
+    --radius: 14px;
+    --shadow: 0 10px 30px -12px rgba(15, 23, 42, 0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* The hidden attribute must always win over component display rules. */
+  [hidden] { display: none !important; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, var(--bg-1) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-2) 0%, #eef2f7 100%);
+    min-height: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px 48px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { width: 100%; max-width: 560px; }
+
+  /* ==========================================================================
+     Header
+     ========================================================================== */
+  .brand { text-align: center; margin-bottom: 24px; }
+
+  .logo {
+    width: 52px; height: 52px;
+    margin: 0 auto 14px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    color: #fff;
+    box-shadow: 0 8px 20px -8px rgba(5, 150, 105, 0.55);
+  }
+  .logo svg { width: 28px; height: 28px; }
+
+  .brand h1 {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .brand h1 span { color: var(--accent); }
+
+  .tagline { color: var(--muted); font-size: 0.95rem; margin-top: 4px; }
+
+  /* ==========================================================================
+     Card / form
+     ========================================================================== */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px;
+  }
+
+  .field { margin-bottom: 18px; }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .req { color: var(--muted); font-weight: 500; }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+  }
+  input[type="text"]:disabled { background: #f8fafc; color: var(--muted); }
+
+  .hint { font-size: 0.78rem; color: var(--muted); margin-top: 5px; }
+  .hint code {
+    background: #f1f5f9; padding: 1px 5px; border-radius: 4px;
+    font-size: 0.75rem;
+  }
+
+  /* Visually hidden native file input (the dropzone label is the control) */
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+
+  .dropzone {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 26px 16px;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 10px;
+    background: #fafcfe;
+    color: var(--muted);
+    font-size: 0.9rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .dropzone:hover, .dropzone:focus-within { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone.dragover { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.01); }
+  .dropzone strong { color: var(--text); font-weight: 600; }
+  .dropzone svg { width: 26px; height: 26px; color: var(--accent); }
+  .dropzone.has-file { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
+
+  .form-error {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+  }
+
+  /* ==========================================================================
+     Button
+     ========================================================================== */
+  .btn {
+    width: 100%;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 13px 18px;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
+    box-shadow: 0 8px 18px -8px rgba(5, 150, 105, 0.55);
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 22px -8px rgba(5, 150, 105, 0.6); }
+  .btn:disabled { opacity: 0.65; cursor: not-allowed; box-shadow: none; }
+
+  .btn-spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .btn.loading .btn-spinner { display: inline-block; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .fineprint {
+    text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 14px;
+  }
+
+  /* ==========================================================================
+     Status panel
+     ========================================================================== */
+  .status {
+    margin-top: 22px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    background: #f8fafc;
+  }
+  .status[data-kind="busy"]    { border-color: #a7f3d0; background: var(--accent-soft); }
+  .status[data-kind="success"] { border-color: #6ee7b7; background: var(--success-soft); }
+  .status[data-kind="error"]   { border-color: #fecaca; background: var(--danger-soft); }
+
+  .status-row { display: flex; align-items: center; gap: 10px; }
+
+  .spinner {
+    width: 18px; height: 18px; flex-shrink: 0;
+    border: 2.5px solid rgba(5, 150, 105, 0.25);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .status-icon {
+    width: 22px; height: 22px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    color: #fff; font-size: 0.8rem; font-weight: 800;
+  }
+  .status[data-kind="success"] .status-icon { background: var(--success); }
+  .status[data-kind="error"]   .status-icon { background: var(--danger); }
+
+  .status-text { font-size: 0.92rem; font-weight: 600; }
+  .status[data-kind="error"] .status-text { color: var(--danger); white-space: pre-wrap; }
+  .status[data-kind="success"] .status-text { color: #065f46; }
+
+  .status-meta { margin-top: 8px; font-size: 0.8rem; color: var(--muted); }
+  .status-meta a { color: var(--accent); font-weight: 600; }
+
+  details.log { margin-top: 10px; }
+  details.log summary {
+    cursor: pointer; font-size: 0.8rem; color: var(--muted); user-select: none;
+  }
+  details.log pre {
+    margin-top: 8px;
+    max-height: 200px; overflow: auto;
+    background: #0f172a; color: #cbd5e1;
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 0.72rem; line-height: 1.45;
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  /* ==========================================================================
+     Tips footer
+     ========================================================================== */
+  .tips {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin-top: 22px;
+  }
+  .tip {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .tip span {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 800; font-size: 0.72rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .server-chip {
+    display: flex; justify-content: center; align-items: center; gap: 7px;
+    margin-top: 20px;
+    font-size: 0.78rem; color: var(--muted);
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #94a3b8;
+  }
+  .dot.ok { background: var(--success); }
+  .dot.warn { background: #f59e0b; }
+  .dot.down { background: var(--danger); }
+
+  /* ==========================================================================
+     Responsive
+     ========================================================================== */
+  @media (max-width: 520px) {
+    body { padding: 24px 12px 32px; }
+    .card { padding: 20px; }
+    .tips { grid-template-columns: 1fr; }
+    .brand h1 { font-size: 1.4rem; }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+
+  <header class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <rect x="6" y="2" width="12" height="20" rx="2.5" />
+        <path d="M12 7.5v6" />
+        <path d="m9.5 11 2.5 2.5L14.5 11" />
+        <path d="M10.5 19h3" />
+      </svg>
+    </div>
+    <h1>HTML <span>→</span> APK</h1>
+    <p class="tagline">Convert any static website into a ready-to-install Android app.</p>
+  </header>
+
+  <section class="card">
+    <form id="buildForm" novalidate>
+
+      <div class="field">
+        <label for="appName">App Name</label>
+        <input type="text" id="appName" name="appName" placeholder="My Awesome App"
+               autocomplete="off" maxlength="50" required />
+        <p class="hint">Shown under the app icon on the device.</p>
+      </div>
+
+      <div class="field">
+        <label for="packageId">Package ID</label>
+        <input type="text" id="packageId" name="packageId" placeholder="com.example.app"
+               autocomplete="off" spellcheck="false" required />
+        <p class="hint">Reverse-domain identifier, e.g. <code>com.yourname.myapp</code>.</p>
+      </div>
+
+      <div class="field">
+        <label for="webAssets">Web Assets <span class="req">(.zip)</span></label>
+        <input type="file" id="webAssets" name="webAssets" accept=".zip"
+               class="visually-hidden" tabindex="-1" />
+        <label for="webAssets" id="dropZone" class="dropzone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <path d="M17 8l-5-5-5 5" />
+            <path d="M12 3v12" />
+          </svg>
+          <span id="dropText"><strong>Choose a .zip file</strong> or drop it here</span>
+        </label>
+        <p class="hint">Must contain <code>index.html</code> at the archive root.</p>
+      </div>
+
+      <p class="form-error" id="formError" role="alert" hidden></p>
+
+      <button type="submit" id="buildBtn" class="btn">
+        <span class="btn-spinner" aria-hidden="true"></span>
+        <span class="btn-label">Build APK</span>
+      </button>
+
+      <p class="fineprint">The compiled <code>.apk</code> downloads automatically when the build finishes.</p>
+    </form>
+
+    <section class="status" id="statusPanel" data-kind="idle" hidden aria-live="polite">
+      <div class="status-row">
+        <span class="spinner" id="statusSpinner" aria-hidden="true"></span>
+        <span class="status-icon" id="statusIcon" hidden></span>
+        <span class="status-text" id="statusText">Idle</span>
+      </div>
+      <div class="status-meta" id="statusMeta" hidden></div>
+      <details class="log" id="logBox" hidden>
+        <summary>View server log</summary>
+        <pre id="logPre"></pre>
+      </details>
+    </section>
+  </section>
+
+  <footer>
+    <div class="tips" aria-label="How it works">
+      <div class="tip"><span>1</span><p>Zip your website with <strong>index.html</strong> at the root.</p></div>
+      <div class="tip"><span>2</span><p>Fill in the details and press <strong>Build&nbsp;APK</strong>.</p></div>
+      <div class="tip"><span>3</span><p>Install the downloaded APK on any Android device.</p></div>
+    </div>
+    <div class="server-chip">
+      <span class="dot" id="serverDot"></span>
+      <span id="serverText">Checking server…</span>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------------------------------------------------------------------- *
+   *  Element references
+   * ---------------------------------------------------------------------- */
+  const $ = (id) => document.getElementById(id);
+  const form        = $('buildForm');
+  const appNameEl   = $('appName');
+  const packageIdEl = $('packageId');
+  const fileInput   = $('webAssets');
+  const dropZone    = $('dropZone');
+  const dropText    = $('dropText');
+  const formError   = $('formError');
+  const buildBtn    = $('buildBtn');
+  const btnLabel    = buildBtn.querySelector('.btn-label');
+  const statusPanel = $('statusPanel');
+  const statusText  = $('statusText');
+  const statusSpin  = $('statusSpinner');
+  const statusIcon  = $('statusIcon');
+  const statusMeta  = $('statusMeta');
+  const logBox      = $('logBox');
+  const logPre      = $('logPre');
+  const serverDot   = $('serverDot');
+  const serverText  = $('serverText');
+
+  /* ---------------------------------------------------------------------- *
+   *  Constants
+   * ---------------------------------------------------------------------- */
+  const PACKAGE_ID_RE = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/;
+  const MAX_UPLOAD_MB = 50;              // keep in sync with server MAX_UPLOAD_MB
+  const CLIENT_TIMEOUT_MS = 30 * 60 * 1000; // 30 min hard ceiling on the fetch
+
+  /**
+   * Resolve the API endpoint.
+   * When this page is served through a reverse proxy that requires the
+   * XTransformPort query parameter (sandbox gateways), we carry the parameter
+   * over to API calls. On a normal self-hosted deployment this is simply
+   * "/api/build-apk".
+   */
+  const xtp = new URLSearchParams(window.location.search).get('XTransformPort');
+  const API_URL = '/api/build-apk' + (xtp ? `?XTransformPort=${encodeURIComponent(xtp)}` : '');
+  const HEALTH_URL = '/healthz' + (xtp ? `?XTransformPort=${encodeURIComponent(xtp)}` : '');
+
+  /* ---------------------------------------------------------------------- *
+   *  State
+   * ---------------------------------------------------------------------- */
+  let selectedFile = null;      // File chosen via input or drag & drop
+  let elapsedTimer = null;      // mm:ss ticker while building
+  let currentObjectUrl = null;  // blob URL of the last successful build
+
+  /* ---------------------------------------------------------------------- *
+   *  Status helpers
+   * ---------------------------------------------------------------------- */
+  function setStatus(kind, text) {
+    statusPanel.hidden = false;
+    statusPanel.dataset.kind = kind; // idle | busy | success | error
+    statusText.textContent = text;
+    const busy = kind === 'busy';
+    statusSpin.hidden = !busy;
+    statusIcon.hidden = !(kind === 'success' || kind === 'error');
+    statusIcon.textContent = kind === 'success' ? '✓' : '✕';
+    if (!busy) stopTimer();
+  }
+
+  function startTimer() {
+    const t0 = Date.now();
+    statusMeta.hidden = false;
+    stopTimer();
+    elapsedTimer = setInterval(() => {
+      const s = Math.floor((Date.now() - t0) / 1000);
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      statusMeta.textContent = `Elapsed ${mm}:${ss} — please keep this tab open`;
+    }, 500);
+  }
+
+  function stopTimer() {
+    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+  }
+
+  function showFormError(msg) {
+    formError.textContent = msg;
+    formError.hidden = false;
+    formError.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function clearFormError() {
+    formError.hidden = true;
+    formError.textContent = '';
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+  }
+
+  /* ---------------------------------------------------------------------- *
+   *  File selection (click + drag & drop)
+   * ---------------------------------------------------------------------- */
+  function setDropText(file) {
+    if (file) {
+      dropZone.classList.add('has-file');
+      dropText.innerHTML =
+        `<strong>${escapeHtml(file.name)}</strong> ` +
+        `(${(file.size / 1024 / 1024).toFixed(2)} MB) — click to change`;
+    } else {
+      dropZone.classList.remove('has-file');
+      dropText.innerHTML = '<strong>Choose a .zip file</strong> or drop it here';
+    }
+  }
+
+  function acceptFile(file) {
+    if (!file) return;
+    if (!/\.zip$/i.test(file.name)) {
+      showFormError('Please choose a .zip archive.');
+      selectedFile = null;
+      fileInput.value = '';
+      setDropText(null);
+      return;
+    }
+    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      showFormError(`File is larger than the ${MAX_UPLOAD_MB} MB server limit.`);
+      selectedFile = null;
+      fileInput.value = '';
+      setDropText(null);
+      return;
+    }
+    clearFormError();
+    selectedFile = file;
+    setDropText(file);
+  }
+
+  fileInput.addEventListener('change', () => acceptFile(fileInput.files[0]));
+
+  ['dragenter', 'dragover'].forEach((evt) =>
+    dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    })
+  );
+  ['dragleave', 'drop'].forEach((evt) =>
+    dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+    })
+  );
+  dropZone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    acceptFile(file);
+  });
+
+  /* ---------------------------------------------------------------------- *
+   *  Validation
+   * ---------------------------------------------------------------------- */
+  function validate() {
+    clearFormError();
+    const name = appNameEl.value.trim();
+    const pkg = packageIdEl.value.trim();
+
+    if (!name) { showFormError('Please enter an app name.'); appNameEl.focus(); return null; }
+    if (!pkg)  { showFormError('Please enter a package ID.'); packageIdEl.focus(); return null; }
+    if (!PACKAGE_ID_RE.test(pkg)) {
+      showFormError('Package ID must look like com.example.app (letters, digits and dots).');
+      packageIdEl.focus();
+      return null;
+    }
+    if (!selectedFile) {
+      showFormError('Please attach a .zip file containing your web assets.');
+      return null;
+    }
+    return { name, pkg, file: selectedFile };
+  }
+
+  /* ---------------------------------------------------------------------- *
+   *  Build submission
+   * ---------------------------------------------------------------------- */
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (buildBtn.disabled) return; // guard against double submissions
+    const data = validate();
+    if (!data) return;
+
+    setBusy(true);
+    setStatus('busy', 'Uploading...');
+    startTimer();
+
+    // The single fetch call covers upload + compile; switch the label to the
+    // "compiling" phase once the upload has certainly been handed to the
+    // server (fetch gives no upload progress events).
+    setTimeout(() => {
+      if (buildBtn.disabled) {
+        setStatus('busy', 'Compiling on server (this may take a few minutes)...');
+      }
+    }, 1500);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
+
+    try {
+      const fd = new FormData();
+      fd.append('appName', data.name);
+      fd.append('packageId', data.pkg);
+      fd.append('webAssets', data.file, data.file.name);
+
+      const res = await fetch(API_URL, { method: 'POST', body: fd, signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('application/json')) {
+        let payload = {};
+        try { payload = await res.json(); } catch (_) { /* non-JSON error body */ }
+        const err = new Error(payload.error || `Server error (HTTP ${res.status}).`);
+        err.log = payload.log;
+        throw err;
+      }
+
+      /* -- Success: handle the binary response stream and download it ---- */
+      const blob = await res.blob();
+      const filename =
+        parseFilename(res.headers.get('content-disposition')) || 'app-debug.apk';
+
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = URL.createObjectURL(blob);
+      triggerDownload(currentObjectUrl, filename);
+
+      setStatus('success', `Success — ${filename} (${(blob.size / 1024 / 1024).toFixed(2)} MB) is downloading…`);
+      statusMeta.hidden = false;
+      statusMeta.innerHTML =
+        `If the download did not start, ` +
+        `<a href="${currentObjectUrl}" download="${escapeHtml(filename)}">click here to save your APK</a>.`;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err && err.name === 'AbortError') {
+        setStatus('error', 'Error — the build timed out after 30 minutes.');
+      } else {
+        setStatus('error', `Error — ${err && err.message ? err.message : 'something went wrong.'}`);
+        if (err && err.log) {
+          logBox.hidden = false;
+          logPre.textContent = err.log;
+        } else {
+          logBox.hidden = true;
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  function setBusy(busy) {
+    buildBtn.disabled = busy;
+    buildBtn.classList.toggle('loading', busy);
+    btnLabel.textContent = busy ? 'Building…' : 'Build APK';
+    appNameEl.disabled = busy;
+    packageIdEl.disabled = busy;
+    fileInput.disabled = busy;
+  }
+
+  /* ---------------------------------------------------------------------- *
+   *  Download helpers
+   * ---------------------------------------------------------------------- */
+  function parseFilename(header) {
+    if (!header) return null;
+    let m = /filename\*=UTF-8''([^;]+)/i.exec(header);
+    if (m) { try { return decodeURIComponent(m[1]); } catch (_) { /* fall through */ } }
+    m = /filename="?([^";]+)"?/i.exec(header);
+    return m ? m[1] : null;
+  }
+
+  function triggerDownload(url, filename) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  /* ---------------------------------------------------------------------- *
+   *  Server health chip
+   * ---------------------------------------------------------------------- */
+  (async function checkServer() {
+    try {
+      const res = await fetch(HEALTH_URL, { method: 'GET' });
+      if (!res.ok) throw new Error('bad status');
+      const data = await res.json();
+      const env = data.env || {};
+      const sdkReady = env.javaHomeSet !== false && env.androidSdkPresent !== false;
+      if (sdkReady) {
+        serverDot.className = 'dot ok';
+        serverText.textContent = 'Server online — Android build environment ready';
+      } else {
+        serverDot.className = 'dot warn';
+        serverText.textContent =
+          'Server online — but JAVA_HOME / ANDROID_HOME are not configured (builds will fail, see README)';
+      }
+    } catch (_) {
+      serverDot.className = 'dot down';
+      serverText.textContent = 'Server offline';
+    }
+  })();
+})();
+</script>
+</body>
+</html>
