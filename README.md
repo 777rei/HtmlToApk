@@ -1,4 +1,4 @@
-# HTML → APK Converter (MVP)
+# HTML → APK Converter (777Rei)
 
 Turn any static website — plain **HTML / CSS / JavaScript** — into a ready-to-install,
 debug-signed **Android APK**, entirely from your own server.
