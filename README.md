@@ -277,7 +277,7 @@ are configured — useful for automated checks.
 | `npx cordova` fails with network errors | npm registry unreachable. Test `npm ping`; configure proxy or mirror. |
 | Check disk space | `df -h ~` — the SDK and Gradle caches need several GB. |
 
-## Production hardening (optional, beyond MVP scope)
+## Production hardening (optional, beyond scope)
 
 - Put the app behind **nginx/Caddy with HTTPS** and keep it off the public
   internet if you do not add authentication — anyone who can reach the endpoint
@@ -287,14 +287,14 @@ are configured — useful for automated checks.
 - Run the service in a **container** or dedicated VM; builds execute arbitrary
   archived web content only as passive assets, but resource exhaustion is real.
 - For store-ready releases you need your own **keystore** and a release build
-  (`cordova build android --release` + `apksigner`) — the MVP intentionally
+  (`cordova build android --release` + `apksigner`) — the intentionally
   produces debug-signed APKs only.
 
 ## Notes & limitations
 
 - The APK is a **Cordova WebView shell** around your site: `index.html` loads
   in a system WebView. No Cordova plugins are added, so native device APIs
-  (camera, geolocation…) are not available in this MVP.
+  (camera, geolocation…) are not available in this
 - Sites relying on **server-side backends** must expose those backends over the
   internet; only static assets are bundled.
 - The service performs one build per request with full workspace isolation —
